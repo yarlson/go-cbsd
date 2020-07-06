@@ -1,6 +1,7 @@
 package cbsd
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"testing"
@@ -17,7 +18,12 @@ func (s *TestExec) SetEnv(name, value string) {
 func (s *TestExec) Command(name string, arg ...string) ([]byte, error) {
 	output := ""
 	if reflect.DeepEqual(arg, []string{"bls", "header=0", "display=jname,jid,vm_ram,vm_cpus,vm_os_type,status,vnc_port"}) {
-		output = `build              45726  65536  12  linux    On   5910`
+		output = `a
+build              45726  65536  12  linux    On   5910`
+	}
+
+	if reflect.DeepEqual(arg, []string{"bstop", "inter=0", "jname=error"}) {
+		return nil, errors.New("error")
 	}
 
 	if reflect.DeepEqual(arg, []string{"bstop", "inter=0", "jname=no-domain"}) {
@@ -101,6 +107,45 @@ func TestBHyveService_List(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("List() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestBHyveService_Stop_Error(t *testing.T) {
+	type fields struct {
+		exec Exec
+	}
+	type args struct {
+		instanceId string
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr error
+	}{
+		{
+			name: "Stop: Error",
+			fields: fields{
+				exec: &TestExec{},
+			},
+			args:    args{instanceId: "error"},
+			wantErr: errors.New("error"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b := &BHyveService{
+				exec: tt.fields.exec,
+			}
+			err := b.Stop(tt.args.instanceId)
+			if err == nil {
+				fmt.Println("Stop() error is empty!")
+				return
+			}
+			if !reflect.DeepEqual(err, tt.wantErr) {
+				t.Errorf("List() got = %v, want %v", err, tt.wantErr)
 			}
 		})
 	}
