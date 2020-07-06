@@ -1,4 +1,6 @@
 # go-cbsd
+![Build](https://github.com/yarlson/go-cbsd/workflows/Build/badge.svg)
+
 go-cbsd is a Go client library for managing [CBSD](https://github.com/cbsd/cbsd).
 
 ## Installation
