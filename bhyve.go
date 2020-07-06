@@ -12,6 +12,8 @@ const (
 	ActionStop   = "bstop"
 	ActionRemove = "bremove"
 	ActionCreate = "bcreate"
+
+	NoSuchDomainError = "No such domain"
 )
 
 type BHyve struct {
@@ -97,7 +99,7 @@ func (b *BHyveService) Start(instanceId string) error {
 	}
 
 	output := string(bt)
-	if strings.Contains(output, "No such domain") {
+	if strings.Contains(output, NoSuchDomainError) {
 		return errors.New(output)
 	}
 
@@ -111,7 +113,7 @@ func (b *BHyveService) Stop(instanceId string) error {
 	}
 
 	output := string(bt)
-	if strings.Contains(output, "No such domain") {
+	if strings.Contains(output, NoSuchDomainError) {
 		return errors.New(output)
 	}
 
@@ -125,18 +127,19 @@ func (b *BHyveService) Remove(instanceId string) error {
 	}
 
 	output := string(bt)
-	if !strings.Contains(output, "No such domain") {
+	if !strings.Contains(output, NoSuchDomainError) {
 		return nil
 	}
 
 	lines := strings.Split(string(output), "\n")
-	for _, line := range lines {
-		if strings.Contains(line, "No such domain") {
-			return errors.New(line)
+	var line string
+	for _, line = range lines {
+		if strings.Contains(line, NoSuchDomainError) {
+			break
 		}
 	}
 
-	return nil
+	return errors.New(line)
 }
 
 func (b *BHyveService) List() ([]BHyve, error) {
