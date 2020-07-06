@@ -125,12 +125,14 @@ func (b *BHyveService) Remove(instanceId string) error {
 	}
 
 	output := string(bt)
-	if strings.Contains(output, "No such domain") {
-		lines := strings.Split(string(output), "\n")
-		for _, line := range lines {
-			if strings.Contains(line, "No such domain") {
-				return errors.New(line)
-			}
+	if !strings.Contains(output, "No such domain") {
+		return nil
+	}
+
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		if strings.Contains(line, "No such domain") {
+			return errors.New(line)
 		}
 	}
 
@@ -149,18 +151,19 @@ func (b *BHyveService) List() ([]BHyve, error) {
 
 	var bHyves []BHyve
 	for _, line := range lines {
-		if len(line) > 2 {
-			fields := strings.Fields(line)
-			ima := BHyve{}
-			ima.JName = fields[0]
-			ima.JID, _ = strconv.Atoi(fields[1])
-			ima.VmRam, _ = strconv.Atoi(fields[2])
-			ima.VmCPUs, _ = strconv.Atoi(fields[3])
-			ima.VmOSType = fields[4]
-			ima.Status = fields[5]
-			ima.VNC = fields[6]
-			bHyves = append(bHyves, ima)
+		if len(line) <= 2 {
+			continue
 		}
+		fields := strings.Fields(line)
+		ima := BHyve{}
+		ima.JName = fields[0]
+		ima.JID, _ = strconv.Atoi(fields[1])
+		ima.VmRam, _ = strconv.Atoi(fields[2])
+		ima.VmCPUs, _ = strconv.Atoi(fields[3])
+		ima.VmOSType = fields[4]
+		ima.Status = fields[5]
+		ima.VNC = fields[6]
+		bHyves = append(bHyves, ima)
 	}
 
 	return bHyves, nil
