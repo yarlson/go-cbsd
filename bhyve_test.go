@@ -42,6 +42,18 @@ PID: 25681`
 		output = `No such domain: no-domain`
 	}
 
+	if reflect.DeepEqual(arg, []string{"bremove", "inter=0", "jname=no-domain"}) {
+		output = `No such domain: no-domain
+bremove done in 0 seconds`
+	}
+
+	if reflect.DeepEqual(arg, []string{"bremove", "inter=0", "jname=domain"}) {
+		output = `Send SIGTERM to test. Soft timeout is 30 sec. 0 seconds left [..............................]
+bstop done in 13 seconds
+destroy parent zvol for test: crdata/test/dsk1.vhd
+bremove done in 17 seconds`
+	}
+
 	return []byte(output), nil
 }
 
@@ -233,6 +245,78 @@ func TestBHyveService_Start_No_Domain(t *testing.T) {
 			}
 			if err.Error() != tt.want {
 				t.Errorf("Start() got = %v, want %v", err.Error(), tt.want)
+			}
+		})
+	}
+}
+
+func TestBHyveService_Remove_No_Domain(t *testing.T) {
+	type fields struct {
+		exec Exec
+	}
+	type args struct {
+		instanceId string
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   string
+	}{
+		{
+			name: "Remove: No such domain",
+			fields: fields{
+				exec: &TestExec{},
+			},
+			args: args{instanceId: "no-domain"},
+			want: "No such domain: no-domain",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b := &BHyveService{
+				exec: tt.fields.exec,
+			}
+			err := b.Remove(tt.args.instanceId)
+			if err == nil {
+				fmt.Println("Remove() error is empty!")
+				return
+			}
+			if err.Error() != tt.want {
+				t.Errorf("Remove() got = %v, want %v", err.Error(), tt.want)
+			}
+		})
+	}
+}
+
+func TestBHyveService_Remove(t *testing.T) {
+	type fields struct {
+		exec Exec
+	}
+	type args struct {
+		instanceId string
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+	}{
+		{
+			name: "Remove: Done",
+			fields: fields{
+				exec: &TestExec{},
+			},
+			args: args{instanceId: "domain"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b := &BHyveService{
+				exec: tt.fields.exec,
+			}
+			err := b.Remove(tt.args.instanceId)
+			if err != nil {
+				t.Errorf("Remove() got = %v, want nil", err.Error())
 			}
 		})
 	}

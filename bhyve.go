@@ -118,8 +118,23 @@ func (b *BHyveService) Stop(instanceId string) error {
 	return nil
 }
 
-func (b *BHyveService) Remove(instanceId string) ([]byte, error) {
-	return b.do(ActionRemove, instanceId)
+func (b *BHyveService) Remove(instanceId string) error {
+	bt, err := b.do(ActionRemove, instanceId)
+	if err != nil {
+		return err
+	}
+
+	output := string(bt)
+	if strings.Contains(output, "No such domain") {
+		lines := strings.Split(string(output), "\n")
+		for _, line := range lines {
+			if strings.Contains(line, "No such domain") {
+				return errors.New(line)
+			}
+		}
+	}
+
+	return nil
 }
 
 func (b *BHyveService) List() ([]BHyve, error) {
