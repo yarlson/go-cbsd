@@ -32,4 +32,4 @@ func main() {
 
 ```
 
-The project is under heavy active development, feel free to submit a pull request.
+The project is under heavy active development, feel free to create a fork and submit a pull request.
