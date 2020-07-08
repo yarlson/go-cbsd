@@ -7,19 +7,25 @@ import (
 	"testing"
 )
 
-type TestExec struct {
+var count int
+
+type BHyveTestExec struct {
 	env []string
 }
 
-func (s *TestExec) SetEnv(name, value string) {
+func (s *BHyveTestExec) SetEnv(name, value string) {
 	s.env = append(s.env, fmt.Sprintf("%s=%s", name, value))
 }
 
-func (s *TestExec) Command(name string, arg ...string) ([]byte, error) {
+func (s *BHyveTestExec) Command(name string, arg ...string) ([]byte, error) {
 	output := ""
 	if reflect.DeepEqual(arg, []string{"bls", "header=0", "display=jname,jid,vm_ram,vm_cpus,vm_os_type,status,vnc_port"}) {
+		count += 1
 		output = `a
 build              45726  65536  12  linux    On   5910`
+		if count == 2 {
+			return nil, errors.New("error")
+		}
 	}
 
 	if reflect.DeepEqual(arg, []string{"bstop", "inter=0", "jname=error"}) {
@@ -44,6 +50,10 @@ Waiting for PID.
 PID: 25681`
 	}
 
+	if reflect.DeepEqual(arg, []string{"bstart", "inter=0", "jname=error"}) {
+		return nil, errors.New("error")
+	}
+
 	if reflect.DeepEqual(arg, []string{"bstart", "inter=0", "jname=no-domain"}) {
 		output = `No such domain: no-domain`
 	}
@@ -51,6 +61,10 @@ PID: 25681`
 	if reflect.DeepEqual(arg, []string{"bremove", "inter=0", "jname=no-domain"}) {
 		output = `No such domain: no-domain
 bremove done in 0 seconds`
+	}
+
+	if reflect.DeepEqual(arg, []string{"bremove", "inter=0", "jname=error"}) {
+		return nil, errors.New("error")
 	}
 
 	if reflect.DeepEqual(arg, []string{"bremove", "inter=0", "jname=domain"}) {
@@ -63,25 +77,20 @@ bremove done in 17 seconds`
 	return []byte(output), nil
 }
 
-func (s *TestExec) CommandWithInterface(name string, i interface{}, arg ...string) ([]byte, error) {
+func (s *BHyveTestExec) CommandWithInterface(name string, i interface{}, arg ...string) ([]byte, error) {
 	return nil, nil
 }
 
 func TestBHyveService_List(t *testing.T) {
-	type fields struct {
-		exec Exec
-	}
 	tests := []struct {
 		name    string
-		fields  fields
+		exec    Exec
 		want    []BHyve
 		wantErr bool
 	}{
 		{
 			name: "BHyve List",
-			fields: fields{
-				exec: &TestExec{},
-			},
+			exec: &BHyveTestExec{},
 			want: []BHyve{
 				{
 					JName:    "build",
@@ -94,11 +103,17 @@ func TestBHyveService_List(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:    "BHyve List Error",
+			exec:    &BHyveTestExec{},
+			wantErr: true,
+		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			b := &BHyveService{
-				exec: tt.fields.exec,
+				exec: tt.exec,
 			}
 			got, err := b.List()
 			if (err != nil) != tt.wantErr {
@@ -112,256 +127,121 @@ func TestBHyveService_List(t *testing.T) {
 	}
 }
 
-func TestBHyveService_Stop_Error(t *testing.T) {
-	type fields struct {
-		exec Exec
-	}
-	type args struct {
-		instanceId string
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr error
-	}{
-		{
-			name: "Stop: Error",
-			fields: fields{
-				exec: &TestExec{},
-			},
-			args:    args{instanceId: "error"},
-			wantErr: errors.New("error"),
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			b := &BHyveService{
-				exec: tt.fields.exec,
-			}
-			err := b.Stop(tt.args.instanceId)
-			if err == nil {
-				fmt.Println("Stop() error is empty!")
-				return
-			}
-			if !reflect.DeepEqual(err, tt.wantErr) {
-				t.Errorf("List() got = %v, want %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
-func TestBHyveService_Stop_No_Domain(t *testing.T) {
-	type fields struct {
-		exec Exec
-	}
-	type args struct {
-		instanceId string
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   string
-	}{
-		{
-			name: "Stop: No such domain",
-			fields: fields{
-				exec: &TestExec{},
-			},
-			args: args{instanceId: "no-domain"},
-			want: "No such domain: no-domain",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			b := &BHyveService{
-				exec: tt.fields.exec,
-			}
-			err := b.Stop(tt.args.instanceId)
-			if err == nil {
-				fmt.Println("Stop() error is empty!")
-				return
-			}
-			if err.Error() != tt.want {
-				t.Errorf("Stop() got = %v, want %v", err.Error(), tt.want)
-			}
-		})
-	}
-}
-
 func TestBHyveService_Stop(t *testing.T) {
-	type fields struct {
-		exec Exec
-	}
-	type args struct {
-		instanceId string
-	}
 	tests := []struct {
-		name   string
-		fields fields
-		args   args
+		name       string
+		exec       Exec
+		instanceId string
+		wantErr    bool
 	}{
 		{
-			name: "Stop: Done",
-			fields: fields{
-				exec: &TestExec{},
-			},
-			args: args{instanceId: "domain"},
+			name:       "Stop: Done",
+			exec:       &BHyveTestExec{},
+			instanceId: "domain",
+		},
+		{
+			name:       "Stop: Error",
+			exec:       &BHyveTestExec{},
+			instanceId: "error",
+			wantErr:    true,
+		},
+		{
+			name:       "Stop: No such domain",
+			exec:       &BHyveTestExec{},
+			instanceId: "no-domain",
+			wantErr:    true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			b := &BHyveService{
-				exec: tt.fields.exec,
+				exec: tt.exec,
 			}
-			err := b.Stop(tt.args.instanceId)
-			if err != nil {
-				t.Errorf("Stop() got = %v, want nil", err.Error())
+			err := b.Stop(tt.instanceId)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Stop() error = %v, wantErr %v", err, tt.wantErr)
+				return
 			}
 		})
 	}
 }
 
 func TestBHyveService_Start(t *testing.T) {
-	type fields struct {
-		exec Exec
-	}
-	type args struct {
-		instanceId string
-	}
 	tests := []struct {
-		name   string
-		fields fields
-		args   args
+		name       string
+		exec       Exec
+		instanceId string
+		wantErr    bool
 	}{
 		{
-			name: "Start: Done",
-			fields: fields{
-				exec: &TestExec{},
-			},
-			args: args{instanceId: "domain"},
+			name:       "Start: Done",
+			exec:       &BHyveTestExec{},
+			instanceId: "domain",
+		},
+		{
+			name:       "Start: Error",
+			exec:       &BHyveTestExec{},
+			instanceId: "error",
+			wantErr:    true,
+		},
+		{
+			name:       "Start: No such domain",
+			exec:       &BHyveTestExec{},
+			instanceId: "no-domain",
+			wantErr:    true,
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			b := &BHyveService{
-				exec: tt.fields.exec,
-			}
-			err := b.Start(tt.args.instanceId)
-			if err != nil {
-				t.Errorf("Start() got = %v, want nil", err.Error())
-			}
-		})
-	}
-}
 
-func TestBHyveService_Start_No_Domain(t *testing.T) {
-	type fields struct {
-		exec Exec
-	}
-	type args struct {
-		instanceId string
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   string
-	}{
-		{
-			name: "Start: No such domain",
-			fields: fields{
-				exec: &TestExec{},
-			},
-			args: args{instanceId: "no-domain"},
-			want: "No such domain: no-domain",
-		},
-	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			b := &BHyveService{
-				exec: tt.fields.exec,
+				exec: tt.exec,
 			}
-			err := b.Start(tt.args.instanceId)
-			if err == nil {
-				fmt.Println("Start() error is empty!")
+			err := b.Start(tt.instanceId)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Start() error = %v, wantErr %v", err, tt.wantErr)
 				return
-			}
-			if err.Error() != tt.want {
-				t.Errorf("Start() got = %v, want %v", err.Error(), tt.want)
-			}
-		})
-	}
-}
-
-func TestBHyveService_Remove_No_Domain(t *testing.T) {
-	type fields struct {
-		exec Exec
-	}
-	type args struct {
-		instanceId string
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   string
-	}{
-		{
-			name: "Remove: No such domain",
-			fields: fields{
-				exec: &TestExec{},
-			},
-			args: args{instanceId: "no-domain"},
-			want: "No such domain: no-domain",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			b := &BHyveService{
-				exec: tt.fields.exec,
-			}
-			err := b.Remove(tt.args.instanceId)
-			if err == nil {
-				fmt.Println("Remove() error is empty!")
-				return
-			}
-			if err.Error() != tt.want {
-				t.Errorf("Remove() got = %v, want %v", err.Error(), tt.want)
 			}
 		})
 	}
 }
 
 func TestBHyveService_Remove(t *testing.T) {
-	type fields struct {
-		exec Exec
-	}
-	type args struct {
-		instanceId string
-	}
 	tests := []struct {
-		name   string
-		fields fields
-		args   args
+		name       string
+		exec       Exec
+		instanceId string
+		wantErr    bool
 	}{
 		{
-			name: "Remove: Done",
-			fields: fields{
-				exec: &TestExec{},
-			},
-			args: args{instanceId: "domain"},
+			name:       "Remove: Done",
+			exec:       &BHyveTestExec{},
+			instanceId: "domain",
+		},
+		{
+			name:       "Remove: Error",
+			exec:       &BHyveTestExec{},
+			instanceId: "error",
+			wantErr:    true,
+		},
+		{
+			name:       "Remove: No such domain",
+			exec:       &BHyveTestExec{},
+			instanceId: "no-domain",
+			wantErr:    true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			b := &BHyveService{
-				exec: tt.fields.exec,
+				exec: tt.exec,
 			}
-			err := b.Remove(tt.args.instanceId)
-			if err != nil {
-				t.Errorf("Remove() got = %v, want nil", err.Error())
+			err := b.Remove(tt.instanceId)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Remove() error = %v, wantErr %v", err, tt.wantErr)
+				return
 			}
 		})
 	}
