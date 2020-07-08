@@ -89,3 +89,75 @@ func Test_structToSlice(t *testing.T) {
 		})
 	}
 }
+
+func Test_quote(t *testing.T) {
+	tests := []struct {
+		name string
+		s    string
+		want string
+	}{
+		{
+			name: "Empty",
+			s:    "",
+			want: "''",
+		},
+		{
+			name: "Normal",
+			s:    "1",
+			want: "1",
+		},
+		{
+			name: "Escape",
+			s:    "1 2",
+			want: "'1 2'",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := quote(tt.s); got != tt.want {
+				t.Errorf("quote() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestShellExec_CommandWithInterface(t *testing.T) {
+	type args struct {
+		name string
+		i    *TestStruct
+		arg  []string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantStr string
+		wantErr bool
+	}{
+		{
+			name: "CommandWithInterface",
+			args: args{
+				name: "ls",
+				i: &TestStruct{
+					Name:        "test",
+					StringValue: "1",
+				},
+				arg: nil,
+			},
+			wantStr: "ls name=test string_value=1",
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &ShellExec{}
+			_, err := s.CommandWithInterface(tt.args.name, tt.args.i, tt.args.arg...)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("CommandWithInterface() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if s.String() != tt.wantStr {
+				t.Errorf("CommandWithInterface() got = %v, want %v", s.String(), tt.wantStr)
+			}
+		})
+	}
+}

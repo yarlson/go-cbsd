@@ -17,7 +17,8 @@ type Exec interface {
 }
 
 type ShellExec struct {
-	env []string
+	env         []string
+	commandLine string
 }
 
 func (s *ShellExec) SetEnv(name, value string) {
@@ -25,10 +26,15 @@ func (s *ShellExec) SetEnv(name, value string) {
 }
 
 func (s *ShellExec) Command(name string, arg ...string) ([]byte, error) {
+	s.commandLine = name + " " + strings.Join(arg, " ")
 	cmd := exec.Command(name, arg...)
 	cmd.Env = append(cmd.Env, s.env...)
 
 	return cmd.Output()
+}
+
+func (s *ShellExec) String() string {
+	return s.commandLine
 }
 
 func (s *ShellExec) CommandWithInterface(name string, i interface{}, arg ...string) ([]byte, error) {
