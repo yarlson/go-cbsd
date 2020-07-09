@@ -53,12 +53,13 @@ func TestShellExec_Command(t *testing.T) {
 }
 
 type TestStruct struct {
-	Name           string `json:"name,omitempty"`
-	StringValue    string `json:"string_value,omitempty"`
-	EmptyValue     string `json:"empty_value,omitempty"`
-	NoTagValue     string
-	BoolField      *bool `json:"bool_field,omitempty"`
-	EmptyBoolField *bool `json:"empty_bool_field,omitempty"`
+	Name              string `json:"name,omitempty"`
+	StringValue       string `json:"string_value,omitempty"`
+	EmptyValue        string `json:"empty_value,omitempty"`
+	NoTagValue        string
+	Bool              bool  `json:"bool,omitempty"`
+	BoolFieldPtr      *bool `json:"bool_field,omitempty"`
+	EmptyBoolFieldPtr *bool `json:"empty_bool_field,omitempty"`
 }
 
 func Test_structToSlice(t *testing.T) {
@@ -71,17 +72,47 @@ func Test_structToSlice(t *testing.T) {
 		want []string
 	}{
 		{
-			name: "Test Struct",
+			name: "Test Struct Bool Ptr",
 			args: args{b: &TestStruct{
-				Name:        "test",
-				StringValue: "test-value",
-				NoTagValue:  "no-tag",
-				BoolField:   Bool(true),
+				Name:         "test",
+				StringValue:  "test-value",
+				NoTagValue:   "no-tag",
+				BoolFieldPtr: Bool(true),
 			}},
 			want: []string{
 				"name=test",
 				"string_value=test-value",
+				"bool=0",
 				"bool_field=1",
+			},
+		},
+		{
+			name: "Test Struct Bool Ptr False",
+			args: args{b: &TestStruct{
+				Name:         "test",
+				StringValue:  "test-value",
+				NoTagValue:   "no-tag",
+				BoolFieldPtr: Bool(false),
+			}},
+			want: []string{
+				"name=test",
+				"string_value=test-value",
+				"bool=0",
+				"bool_field=0",
+			},
+		},
+		{
+			name: "Test Struct Bool",
+			args: args{b: &TestStruct{
+				Name:        "test",
+				StringValue: "test-value",
+				NoTagValue:  "no-tag",
+				Bool:        true,
+			}},
+			want: []string{
+				"name=test",
+				"string_value=test-value",
+				"bool=1",
 			},
 		},
 		{
@@ -90,12 +121,12 @@ func Test_structToSlice(t *testing.T) {
 				Name:        "test",
 				StringValue: "test-value",
 				NoTagValue:  "no-tag",
-				BoolField:   Bool(false),
+				Bool:        false,
 			}},
 			want: []string{
 				"name=test",
 				"string_value=test-value",
-				"bool_field=0",
+				"bool=0",
 			},
 		},
 	}
@@ -161,7 +192,7 @@ func TestShellExec_CommandWithInterface(t *testing.T) {
 				},
 				arg: nil,
 			},
-			wantStr: "ls name=test string_value=1",
+			wantStr: "ls name=test string_value=1 bool=0",
 			wantErr: true,
 		},
 	}
