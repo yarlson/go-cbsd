@@ -65,16 +65,43 @@ func structToSlice(b interface{}) []string {
 	var slice []string
 	for i := 0; i < iVal.NumField(); i++ {
 		f := iVal.Field(i)
-		if f.String() == "" {
-			continue
-		}
+		f.Type()
 		tag := typ.Field(i).Tag.Get("json")
 		if tag == "" {
 			continue
 		}
+
+		var value interface{}
+		switch f.Kind() {
+		case reflect.Ptr:
+			{
+				if f.IsNil() {
+					continue
+				}
+				value = 0
+				if f.Elem().Bool() {
+					value = 1
+				}
+			}
+		case reflect.String:
+			{
+				if f.String() == "" {
+					continue
+				}
+				value = quote(f.String())
+			}
+		case reflect.Bool:
+			{
+				value = 0
+				if f.Bool() {
+					value = 1
+				}
+			}
+		}
+
 		fields := strings.Split(tag, ",")
 
-		slice = append(slice, fmt.Sprintf("%s=%v", fields[0], quote(f.String())))
+		slice = append(slice, fmt.Sprintf("%s=%v", fields[0], value))
 	}
 
 	return slice

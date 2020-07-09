@@ -53,10 +53,12 @@ func TestShellExec_Command(t *testing.T) {
 }
 
 type TestStruct struct {
-	Name        string `json:"name,omitempty"`
-	StringValue string `json:"string_value,omitempty"`
-	EmptyValue  string `json:"empty_value,omitempty"`
-	NoTagValue  string
+	Name           string `json:"name,omitempty"`
+	StringValue    string `json:"string_value,omitempty"`
+	EmptyValue     string `json:"empty_value,omitempty"`
+	NoTagValue     string
+	BoolField      *bool `json:"bool_field,omitempty"`
+	EmptyBoolField *bool `json:"empty_bool_field,omitempty"`
 }
 
 func Test_structToSlice(t *testing.T) {
@@ -74,10 +76,26 @@ func Test_structToSlice(t *testing.T) {
 				Name:        "test",
 				StringValue: "test-value",
 				NoTagValue:  "no-tag",
+				BoolField:   Bool(true),
 			}},
 			want: []string{
 				"name=test",
 				"string_value=test-value",
+				"bool_field=1",
+			},
+		},
+		{
+			name: "Test Struct Bool False",
+			args: args{b: &TestStruct{
+				Name:        "test",
+				StringValue: "test-value",
+				NoTagValue:  "no-tag",
+				BoolField:   Bool(false),
+			}},
+			want: []string{
+				"name=test",
+				"string_value=test-value",
+				"bool_field=0",
 			},
 		},
 	}

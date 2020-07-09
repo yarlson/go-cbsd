@@ -22,3 +22,7 @@ func NewCBSD() *CBSD {
 		},
 	}
 }
+
+func Bool(b bool) *bool {
+	return &b
+}

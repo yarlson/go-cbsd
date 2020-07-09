@@ -26,19 +26,21 @@ type BHyve struct {
 	VNC      string
 }
 
+// BHyveCreate is a struct that contains all fields to run bcreate command
+// every none empty/none nil field will be converted to name=value pair, the name will be taken form a json tag
 type BHyveCreate struct {
-	JName              string `json:"jname,omitempty"`
-	XHCI               string `json:"xhci,omitempty"`
-	AStart             string `json:"astart,omitempty"`
-	RelativePath       string `json:"relative_path,omitempty"`
-	Path               string `json:"path,omitempty"`
-	Data               string `json:"data,omitempty"`
-	RCConf             string `json:"rcconf,omitempty"`
-	HostHostname       string `json:"host_hostname,omitempty"`
-	IP4Addr            string `json:"ip4_addr,omitempty"`
-	NicHWAddr          string `json:"nic_hwaddr,omitempty"`
-	ZfsSnapSrc         string `json:"zfs_snapsrc,omitempty"`
-	RunASAP            string `json:"runasap,omitempty"`
+	Name               string `json:"jname,omitempty"`         // A short jail name
+	XHCI               string `json:"xhci,omitempty"`          // eXtensible Host Controller Interface (xHCI) USB controller
+	AutoStart          *bool  `json:"astart,omitempty"`        // Automatically start Jail when system boot
+	RelativePath       *bool  `json:"relative_path,omitempty"` // Use relative path
+	Path               string `json:"path,omitempty"`          // Jail path
+	Data               string `json:"data,omitempty"`          // Data path
+	RCConf             string `json:"rcconf,omitempty"`        // rc.conf path
+	Hostname           string `json:"host_hostname,omitempty"` // Full (FQDN) jail hostname
+	IP4Addr            string `json:"ip4_addr,omitempty"`      // IPv4 address
+	NicHWAddr          string `json:"nic_hwaddr,omitempty"`    // MAC address
+	ZfsSnapSrc         string `json:"zfs_snapsrc,omitempty"`   // Use this ZFS snapshot as source for jail data
+	RunASAP            *bool  `json:"runasap,omitempty"`       // Start jail ASAP upon creation
 	Interface          string `json:"interface,omitempty"`
 	RCtlNice           string `json:"rctl_nice,omitempty"`
 	Emulator           string `json:"emulator,omitempty"`
