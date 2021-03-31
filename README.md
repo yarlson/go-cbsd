@@ -14,13 +14,14 @@ go get -u github.com/yarlson/go-cbsd
 package main
 
 import (
+	"context"
 	"fmt"
-	"github.com/yarlson/go-cbsd"
+	"github.com/yarlson/go-cbsd/v2"
 )
 
 func main() {
 	c := cbsd.NewCBSD()
-	bHyves, err := c.BHyve.List()
+	bHyves, err := c.BHyve.List(context.Background())
 	if err != nil {
 		panic(err)
 	}
