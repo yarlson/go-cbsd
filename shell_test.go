@@ -1,6 +1,7 @@
 package cbsd
 
 import (
+	"context"
 	"reflect"
 	"strings"
 	"testing"
@@ -40,7 +41,7 @@ func TestShellExec_Command(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &ShellExec{}
 			s.SetEnv(tt.fields.name, tt.fields.value)
-			got, err := s.Command(tt.args.name, tt.args.arg...)
+			got, err := s.Command(context.Background(), tt.args.name, tt.args.arg...)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Command() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -199,7 +200,7 @@ func TestShellExec_CommandWithInterface(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &ShellExec{}
-			_, err := s.CommandWithInterface(tt.args.name, tt.args.i, tt.args.arg...)
+			_, err := s.CommandWithInterface(context.Background(), tt.args.name, tt.args.i, tt.args.arg...)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("CommandWithInterface() error = %v, wantErr %v", err, tt.wantErr)
 				return

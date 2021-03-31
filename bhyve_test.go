@@ -1,6 +1,7 @@
 package cbsd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"reflect"
@@ -17,7 +18,7 @@ func (s *BHyveTestExec) SetEnv(name, value string) {
 	s.env = append(s.env, fmt.Sprintf("%s=%s", name, value))
 }
 
-func (s *BHyveTestExec) Command(name string, arg ...string) ([]byte, error) {
+func (s *BHyveTestExec) Command(ctx context.Context, name string, arg ...string) ([]byte, error) {
 	output := ""
 	if reflect.DeepEqual(arg, []string{"bls", "header=0", "display=jname,jid,vm_ram,vm_cpus,vm_os_type,status,vnc_port"}) {
 		count += 1
@@ -77,7 +78,7 @@ bremove done in 17 seconds`
 	return []byte(output), nil
 }
 
-func (s *BHyveTestExec) CommandWithInterface(name string, i interface{}, arg ...string) ([]byte, error) {
+func (s *BHyveTestExec) CommandWithInterface(ctx context.Context, name string, i interface{}, arg ...string) ([]byte, error) {
 	return nil, nil
 }
 
@@ -115,7 +116,7 @@ func TestBHyveService_List(t *testing.T) {
 			b := &BHyveService{
 				exec: tt.exec,
 			}
-			got, err := b.List()
+			got, err := b.List(nil)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("List() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -158,7 +159,7 @@ func TestBHyveService_Stop(t *testing.T) {
 			b := &BHyveService{
 				exec: tt.exec,
 			}
-			err := b.Stop(tt.instanceId)
+			err := b.Stop(nil, tt.instanceId)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Stop() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -198,7 +199,7 @@ func TestBHyveService_Start(t *testing.T) {
 			b := &BHyveService{
 				exec: tt.exec,
 			}
-			err := b.Start(tt.instanceId)
+			err := b.Start(nil, tt.instanceId)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Start() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -238,7 +239,7 @@ func TestBHyveService_Remove(t *testing.T) {
 			b := &BHyveService{
 				exec: tt.exec,
 			}
-			err := b.Remove(tt.instanceId)
+			err := b.Remove(nil, tt.instanceId)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Remove() error = %v, wantErr %v", err, tt.wantErr)
 				return

@@ -1,6 +1,7 @@
 package cbsd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strconv"
@@ -89,13 +90,13 @@ type BHyveService struct {
 	exec Exec
 }
 
-func (b *BHyveService) do(action, instanceId string) ([]byte, error) {
+func (b *BHyveService) do(ctx context.Context, action, instanceId string) ([]byte, error) {
 	b.exec.SetEnv("NOCOLOR", "1")
-	return b.exec.Command("cbsd", action, "inter=0", fmt.Sprintf("jname=%s", instanceId))
+	return b.exec.Command(nil, "cbsd", action, "inter=0", fmt.Sprintf("jname=%s", instanceId))
 }
 
-func (b *BHyveService) Start(instanceId string) error {
-	bt, err := b.do(ActionStart, instanceId)
+func (b *BHyveService) Start(ctx context.Context, instanceId string) error {
+	bt, err := b.do(ctx, ActionStart, instanceId)
 	if err != nil {
 		return err
 	}
@@ -108,8 +109,8 @@ func (b *BHyveService) Start(instanceId string) error {
 	return nil
 }
 
-func (b *BHyveService) Stop(instanceId string) error {
-	bt, err := b.do(ActionStop, instanceId)
+func (b *BHyveService) Stop(ctx context.Context, instanceId string) error {
+	bt, err := b.do(ctx, ActionStop, instanceId)
 	if err != nil {
 		return err
 	}
@@ -122,8 +123,8 @@ func (b *BHyveService) Stop(instanceId string) error {
 	return nil
 }
 
-func (b *BHyveService) Remove(instanceId string) error {
-	bt, err := b.do(ActionRemove, instanceId)
+func (b *BHyveService) Remove(ctx context.Context, instanceId string) error {
+	bt, err := b.do(ctx, ActionRemove, instanceId)
 	if err != nil {
 		return err
 	}
@@ -144,9 +145,9 @@ func (b *BHyveService) Remove(instanceId string) error {
 	return errors.New(line)
 }
 
-func (b *BHyveService) List() ([]BHyve, error) {
+func (b *BHyveService) List(ctx context.Context) ([]BHyve, error) {
 	b.exec.SetEnv("NOCOLOR", "1")
-	output, err := b.exec.Command("cbsd", "bls", "header=0", "display=jname,jid,vm_ram,vm_cpus,vm_os_type,status,vnc_port")
+	output, err := b.exec.Command(ctx, "cbsd", "bls", "header=0", "display=jname,jid,vm_ram,vm_cpus,vm_os_type,status,vnc_port")
 
 	if err != nil {
 		return nil, err
@@ -174,7 +175,7 @@ func (b *BHyveService) List() ([]BHyve, error) {
 	return bHyves, nil
 }
 
-func (b *BHyveService) Create(createData *BHyveCreate) ([]byte, error) {
+func (b *BHyveService) Create(ctx context.Context, createData *BHyveCreate) ([]byte, error) {
 	b.exec.SetEnv("NOCOLOR", "1")
-	return b.exec.CommandWithInterface("cbsd", createData, ActionCreate, "inter=0")
+	return b.exec.CommandWithInterface(ctx, "cbsd", createData, ActionCreate, "inter=0")
 }

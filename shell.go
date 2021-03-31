@@ -1,6 +1,7 @@
 package cbsd
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"reflect"
@@ -12,8 +13,8 @@ var pattern *regexp.Regexp
 
 type Exec interface {
 	SetEnv(name, value string)
-	Command(name string, arg ...string) ([]byte, error)
-	CommandWithInterface(name string, i interface{}, arg ...string) ([]byte, error)
+	Command(ctx context.Context, name string, arg ...string) ([]byte, error)
+	CommandWithInterface(ctx context.Context, name string, i interface{}, arg ...string) ([]byte, error)
 }
 
 type ShellExec struct {
@@ -25,9 +26,9 @@ func (s *ShellExec) SetEnv(name, value string) {
 	s.env = append(s.env, fmt.Sprintf("%s=%s", name, value))
 }
 
-func (s *ShellExec) Command(name string, arg ...string) ([]byte, error) {
+func (s *ShellExec) Command(ctx context.Context, name string, arg ...string) ([]byte, error) {
 	s.commandLine = name + " " + strings.Join(arg, " ")
-	cmd := exec.Command(name, arg...)
+	cmd := exec.CommandContext(ctx, name, arg...)
 	cmd.Env = append(cmd.Env, s.env...)
 
 	return cmd.Output()
@@ -37,10 +38,10 @@ func (s *ShellExec) String() string {
 	return s.commandLine
 }
 
-func (s *ShellExec) CommandWithInterface(name string, i interface{}, arg ...string) ([]byte, error) {
+func (s *ShellExec) CommandWithInterface(ctx context.Context, name string, i interface{}, arg ...string) ([]byte, error) {
 	arg = append(arg, structToSlice(i)...)
 
-	return s.Command(name, arg...)
+	return s.Command(ctx, name, arg...)
 }
 
 func init() {
