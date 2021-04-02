@@ -92,7 +92,7 @@ type BHyveService struct {
 
 func (b *BHyveService) do(ctx context.Context, action, instanceId string) ([]byte, error) {
 	b.exec.SetEnv("NOCOLOR", "1")
-	return b.exec.Command(nil, "cbsd", action, "inter=0", fmt.Sprintf("jname=%s", instanceId))
+	return b.exec.Command(ctx, "cbsd", action, "inter=0", fmt.Sprintf("jname=%s", instanceId))
 }
 
 func (b *BHyveService) Start(ctx context.Context, instanceId string) error {

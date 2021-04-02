@@ -3,86 +3,29 @@ package cbsd
 import (
 	"context"
 	"errors"
-	"fmt"
+	"github.com/yarlson/go-cbsd/v2/mock"
 	"reflect"
 	"testing"
 )
 
-var count int
-
-type BHyveTestExec struct {
-	env []string
-}
-
-func (s *BHyveTestExec) SetEnv(name, value string) {
-	s.env = append(s.env, fmt.Sprintf("%s=%s", name, value))
-}
-
-func (s *BHyveTestExec) Command(ctx context.Context, name string, arg ...string) ([]byte, error) {
-	output := ""
-	if reflect.DeepEqual(arg, []string{"bls", "header=0", "display=jname,jid,vm_ram,vm_cpus,vm_os_type,status,vnc_port"}) {
-		count += 1
-		output = `a
-build              45726  65536  12  linux    On   5910`
-		if count == 2 {
-			return nil, errors.New("error")
-		}
-	}
-
-	if reflect.DeepEqual(arg, []string{"bstop", "inter=0", "jname=error"}) {
-		return nil, errors.New("error")
-	}
-
-	if reflect.DeepEqual(arg, []string{"bstop", "inter=0", "jname=no-domain"}) {
-		output = `No such domain: no-domain`
-	}
-
-	if reflect.DeepEqual(arg, []string{"bstop", "inter=0", "jname=domain"}) {
-		output = `Send SIGTERM to test Soft timeout is 30 sec. 0 seconds left [..............................]
-bstop done in 11 seconds`
-	}
-
-	if reflect.DeepEqual(arg, []string{"bstart", "inter=0", "jname=domain"}) {
-		output = `VRDP is enabled. VNC bind/port: 127.0.0.1:5912
-For attach VM console, use: vncviewer 127.0.0.1:5912
-Resolution: 1024x768.
-bhyve renice: 1
-Waiting for PID.
-PID: 25681`
-	}
-
-	if reflect.DeepEqual(arg, []string{"bstart", "inter=0", "jname=error"}) {
-		return nil, errors.New("error")
-	}
-
-	if reflect.DeepEqual(arg, []string{"bstart", "inter=0", "jname=no-domain"}) {
-		output = `No such domain: no-domain`
-	}
-
-	if reflect.DeepEqual(arg, []string{"bremove", "inter=0", "jname=no-domain"}) {
-		output = `No such domain: no-domain
-bremove done in 0 seconds`
-	}
-
-	if reflect.DeepEqual(arg, []string{"bremove", "inter=0", "jname=error"}) {
-		return nil, errors.New("error")
-	}
-
-	if reflect.DeepEqual(arg, []string{"bremove", "inter=0", "jname=domain"}) {
-		output = `Send SIGTERM to test. Soft timeout is 30 sec. 0 seconds left [..............................]
-bstop done in 13 seconds
-destroy parent zvol for test: crdata/test/dsk1.vhd
-bremove done in 17 seconds`
-	}
-
-	return []byte(output), nil
-}
-
-func (s *BHyveTestExec) CommandWithInterface(ctx context.Context, name string, i interface{}, arg ...string) ([]byte, error) {
-	return nil, nil
-}
-
 func TestBHyveService_List(t *testing.T) {
+	mockedExec := &mock.ExecMock{
+		CommandFunc: func(ctx context.Context, name string, arg ...string) ([]byte, error) {
+			output := []byte("build               45726  65536  12  linux    On   5910")
+			return output, nil
+		},
+		SetEnvFunc: func(name string, value string) {
+			return
+		},
+	}
+	mockedExecErr := &mock.ExecMock{
+		CommandFunc: func(ctx context.Context, name string, arg ...string) ([]byte, error) {
+			return nil, errors.New("error")
+		},
+		SetEnvFunc: func(name string, value string) {
+			return
+		},
+	}
 	tests := []struct {
 		name    string
 		exec    Exec
@@ -91,7 +34,7 @@ func TestBHyveService_List(t *testing.T) {
 	}{
 		{
 			name: "BHyve List",
-			exec: &BHyveTestExec{},
+			exec: mockedExec,
 			want: []BHyve{
 				{
 					JName:    "build",
@@ -106,7 +49,7 @@ func TestBHyveService_List(t *testing.T) {
 		},
 		{
 			name:    "BHyve List Error",
-			exec:    &BHyveTestExec{},
+			exec:    mockedExecErr,
 			wantErr: true,
 		},
 	}
@@ -116,7 +59,7 @@ func TestBHyveService_List(t *testing.T) {
 			b := &BHyveService{
 				exec: tt.exec,
 			}
-			got, err := b.List(nil)
+			got, err := b.List(context.Background())
 			if (err != nil) != tt.wantErr {
 				t.Errorf("List() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -129,6 +72,33 @@ func TestBHyveService_List(t *testing.T) {
 }
 
 func TestBHyveService_Stop(t *testing.T) {
+	mockedExec := &mock.ExecMock{
+		CommandFunc: func(ctx context.Context, name string, arg ...string) ([]byte, error) {
+			output := []byte(`Send SIGTERM to test Soft timeout is 30 sec. 0 seconds left [..............................]
+bstop done in 11 seconds`)
+			return output, nil
+		},
+		SetEnvFunc: func(name string, value string) {
+			return
+		},
+	}
+	mockedExecErr := &mock.ExecMock{
+		CommandFunc: func(ctx context.Context, name string, arg ...string) ([]byte, error) {
+			return nil, errors.New("error")
+		},
+		SetEnvFunc: func(name string, value string) {
+			return
+		},
+	}
+	mockedExeErrNoDomain := &mock.ExecMock{
+		CommandFunc: func(ctx context.Context, name string, arg ...string) ([]byte, error) {
+			output := []byte(`No such domain: no-domain`)
+			return output, nil
+		},
+		SetEnvFunc: func(name string, value string) {
+			return
+		},
+	}
 	tests := []struct {
 		name       string
 		exec       Exec
@@ -137,18 +107,18 @@ func TestBHyveService_Stop(t *testing.T) {
 	}{
 		{
 			name:       "Stop: Done",
-			exec:       &BHyveTestExec{},
+			exec:       mockedExec,
 			instanceId: "domain",
 		},
 		{
 			name:       "Stop: Error",
-			exec:       &BHyveTestExec{},
+			exec:       mockedExecErr,
 			instanceId: "error",
 			wantErr:    true,
 		},
 		{
 			name:       "Stop: No such domain",
-			exec:       &BHyveTestExec{},
+			exec:       mockedExeErrNoDomain,
 			instanceId: "no-domain",
 			wantErr:    true,
 		},
@@ -159,7 +129,7 @@ func TestBHyveService_Stop(t *testing.T) {
 			b := &BHyveService{
 				exec: tt.exec,
 			}
-			err := b.Stop(nil, tt.instanceId)
+			err := b.Stop(context.Background(), tt.instanceId)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Stop() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -169,6 +139,37 @@ func TestBHyveService_Stop(t *testing.T) {
 }
 
 func TestBHyveService_Start(t *testing.T) {
+	mockedExec := &mock.ExecMock{
+		CommandFunc: func(ctx context.Context, name string, arg ...string) ([]byte, error) {
+			output := []byte(`VRDP is enabled. VNC bind/port: 127.0.0.1:5912
+For attach VM console, use: vncviewer 127.0.0.1:5912
+Resolution: 1024x768.
+bhyve renice: 1
+Waiting for PID.
+PID: 25681`)
+			return output, nil
+		},
+		SetEnvFunc: func(name string, value string) {
+			return
+		},
+	}
+	mockedExecErr := &mock.ExecMock{
+		CommandFunc: func(ctx context.Context, name string, arg ...string) ([]byte, error) {
+			return nil, errors.New("error")
+		},
+		SetEnvFunc: func(name string, value string) {
+			return
+		},
+	}
+	mockedExeErrNoDomain := &mock.ExecMock{
+		CommandFunc: func(ctx context.Context, name string, arg ...string) ([]byte, error) {
+			output := []byte(`No such domain: no-domain`)
+			return output, nil
+		},
+		SetEnvFunc: func(name string, value string) {
+			return
+		},
+	}
 	tests := []struct {
 		name       string
 		exec       Exec
@@ -177,18 +178,18 @@ func TestBHyveService_Start(t *testing.T) {
 	}{
 		{
 			name:       "Start: Done",
-			exec:       &BHyveTestExec{},
+			exec:       mockedExec,
 			instanceId: "domain",
 		},
 		{
 			name:       "Start: Error",
-			exec:       &BHyveTestExec{},
+			exec:       mockedExecErr,
 			instanceId: "error",
 			wantErr:    true,
 		},
 		{
 			name:       "Start: No such domain",
-			exec:       &BHyveTestExec{},
+			exec:       mockedExeErrNoDomain,
 			instanceId: "no-domain",
 			wantErr:    true,
 		},
@@ -199,7 +200,7 @@ func TestBHyveService_Start(t *testing.T) {
 			b := &BHyveService{
 				exec: tt.exec,
 			}
-			err := b.Start(nil, tt.instanceId)
+			err := b.Start(context.Background(), tt.instanceId)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Start() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -209,6 +210,35 @@ func TestBHyveService_Start(t *testing.T) {
 }
 
 func TestBHyveService_Remove(t *testing.T) {
+	mockedExec := &mock.ExecMock{
+		CommandFunc: func(ctx context.Context, name string, arg ...string) ([]byte, error) {
+			output := []byte(`Send SIGTERM to test. Soft timeout is 30 sec. 0 seconds left [..............................]
+bstop done in 13 seconds
+destroy parent zvol for test: crdata/test/dsk1.vhd
+bremove done in 17 seconds`)
+			return output, nil
+		},
+		SetEnvFunc: func(name string, value string) {
+			return
+		},
+	}
+	mockedExecErr := &mock.ExecMock{
+		CommandFunc: func(ctx context.Context, name string, arg ...string) ([]byte, error) {
+			return nil, errors.New("error")
+		},
+		SetEnvFunc: func(name string, value string) {
+			return
+		},
+	}
+	mockedExeErrNoDomain := &mock.ExecMock{
+		CommandFunc: func(ctx context.Context, name string, arg ...string) ([]byte, error) {
+			output := []byte(`No such domain: no-domain`)
+			return output, nil
+		},
+		SetEnvFunc: func(name string, value string) {
+			return
+		},
+	}
 	tests := []struct {
 		name       string
 		exec       Exec
@@ -217,18 +247,18 @@ func TestBHyveService_Remove(t *testing.T) {
 	}{
 		{
 			name:       "Remove: Done",
-			exec:       &BHyveTestExec{},
+			exec:       mockedExec,
 			instanceId: "domain",
 		},
 		{
 			name:       "Remove: Error",
-			exec:       &BHyveTestExec{},
+			exec:       mockedExecErr,
 			instanceId: "error",
 			wantErr:    true,
 		},
 		{
 			name:       "Remove: No such domain",
-			exec:       &BHyveTestExec{},
+			exec:       mockedExeErrNoDomain,
 			instanceId: "no-domain",
 			wantErr:    true,
 		},
@@ -239,7 +269,7 @@ func TestBHyveService_Remove(t *testing.T) {
 			b := &BHyveService{
 				exec: tt.exec,
 			}
-			err := b.Remove(nil, tt.instanceId)
+			err := b.Remove(context.Background(), tt.instanceId)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Remove() error = %v, wantErr %v", err, tt.wantErr)
 				return
