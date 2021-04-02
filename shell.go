@@ -11,6 +11,7 @@ import (
 
 var pattern *regexp.Regexp
 
+//go:generate moq -skip-ensure -out mock/shell_mock.go -pkg mock -fmt goimports . Exec
 type Exec interface {
 	SetEnv(name, value string)
 	Command(ctx context.Context, name string, arg ...string) ([]byte, error)
